@@ -1,0 +1,156 @@
+#include <LiquidCrystal.h>
+#include <Wire.h>
+#include <ds3231.h>
+#include <SPI.h>
+#include <SD.h>
+ 
+
+#define ERS485 2 // Defines pin number to which the Enable of the RS485 Module
+
+LiquidCrystal lcd(8, 7, 6, 5, 4, 3);
+File myFile;
+
+const int chipSelect = 10;// change this to match your SD shield or module;
+struct ts t; 
+String text = "Your txt is here";
+long var = 1234567890;
+uint8_t buf[6]; // n is an array of 10 integers
+uint8_t buffer1;
+int length1;
+byte buffer[6];
+int lenght;
+uint8_t sd[10]={1,2,3,4,5,6,7,8,9,10};
+
+
+void setup() {
+  
+  lcd.begin(16, 2);
+  lcd.clear();
+  lcd.home();
+  lcd.print("*norouzi rain gauge*");
+  lcd.setCursor(0, 1);
+  lcd.print("khorasan Razavi");
+  delay(100);
+  lcd.clear();
+  Serial.begin(9600);  //initialize serial at baudrate 9600
+  pinMode(ERS485, OUTPUT);// Set ERS485 as an output pin
+  digitalWrite(ERS485,LOW);  //((Pin 2 always LOW to receive value from Master))
+  Wire.begin();
+  DS3231_init(DS3231_CONTROL_INTCN);
+  t.hour=12; 
+  t.min=16;
+  t.sec=0;
+  t.mday=31;
+  t.mon=3;
+  t.year=2022;
+  DS3231_set(t); 
+  lcd.setCursor(0,1);
+  lcd.print("Initializing");
+ 
+  if (!SD.begin()) {
+    lcd.setCursor(0,1);
+    lcd.println("failed!");
+    return;
+  }
+  lcd.println("done.");
+ 
+  
+  }
+  
+ void loop() {
+    DS3231_get(&t);
+    lcd.clear();
+    sd[0]=t.mday;
+    sd[1]=t.mon;
+    sd[2]=t.year;
+    sd[3]=t.hour;
+    sd[4]=t.min;
+    sd[5]=t.sec;
+  //lcd.setCursor(0,0);
+  //lcd.print(sd[0]);
+  //lcd.setCursor(1,0);
+  //lcd.print("/");
+  //lcd.setCursor(2,0);
+  //lcd.print(sd[1]);
+  //lcd.setCursor(3,0);
+  //lcd.print("/");
+  //lcd.setCursor(4,0);
+  //lcd.print(sd[2]);
+  //lcd.setCursor(5,0);
+  //lcd.print("\t");
+  
+    lcd.setCursor(0,0);
+    lcd.print(sd[3]);
+    lcd.setCursor(2,0);
+    lcd.print(":");
+    lcd.setCursor(3,0);
+    lcd.print(sd[4]);
+    lcd.setCursor(5,0);
+    lcd.print(".");
+    lcd.setCursor(6,0);
+    lcd.println(sd[5]);
+    lcd.setCursor(8,0);
+    lcd.print("-");
+  
+  while(Serial.available())  //While have data at Serial port this loop executes
+  {
+  if (Serial.available() > 0)
+  {
+    lenght = Serial.readBytes(buffer , 6);
+    if (buffer[0]=='&' && buffer[5]=='*' ){
+      sd[6]=buffer[1];
+      sd[7]=buffer[2];
+      sd[8]=buffer[3];
+      sd[9]=buffer[4];
+      lcd.setCursor(0,1);
+      lcd.print("T=");
+      lcd.setCursor(2,1);
+      lcd.print(sd[6]);
+      lcd.setCursor(5,1);
+      lcd.print("H=");
+      lcd.setCursor(7,1);
+      lcd.print(sd[7]);
+      lcd.setCursor(10,1);
+      lcd.print("R1=");
+      lcd.setCursor(13,1);
+      lcd.print(sd[8]);
+      lcd.setCursor(10,0);
+      lcd.print("R2=");
+      lcd.setCursor(13,0);
+      lcd.print(sd[9]);
+    }
+  }   
+  }
+  
+  myFile = SD.open("data2.txt", FILE_WRITE);
+  if (myFile) {
+   // Serial.print("Writing to data7.txt...");
+    for (int i = 0; i <= 9; i++){
+   myFile.print(sd[i]);
+   myFile.print(",");
+  }
+  myFile.println();
+  myFile.close();
+  }
+  myFile = SD.open("data4.CSV", FILE_WRITE);
+  if (myFile) {
+   // Serial.print("Writing to data7.txt...");
+    for (int i = 0; i <= 2; i++){
+   myFile.print(sd[i]);
+   myFile.print(",");
+  }
+  myFile.print('/t');
+  for (int i = 3; i <= 5; i++){
+   myFile.print(sd[i]);
+   myFile.print(",");
+  }
+  myFile.print('/t');
+  for (int i = 6; i <= 9; i++){
+   myFile.print(sd[i]);
+   myFile.print(",");
+  }
+  myFile.println();
+  myFile.close();
+  }
+  delay(1000); 
+}
