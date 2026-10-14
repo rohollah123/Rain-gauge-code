@@ -1,0 +1,93 @@
+#include <dht.h>
+
+#define ERS485 2        // Defines pin number to which the Enable of the RS485 Module
+#define dataPin 13      // Defines pin number to which the sensor is connected
+#define ReadSwitch1 3   // Defines pin number to which the Read Switch1 is connected
+#define ReadSwitch2 12  // Defines pin number to which the Read Switch2 is connected
+#define RelayPin1 8     // Defines pin number to which the Relay1 is connected
+#define RelayPin2 7     // Defines pin number to which the Relay2 is connected
+#define LED1 9          // Defines pin number to which the LED1 is connected
+#define LED2 10         // Defines pin number to which the LED2 is connected
+#define LED3 11         // Defines pin number to which the LED3 is connected
+
+dht DHT; // Creats a DHT object
+
+int readData = 0;  // variable to store the read DHT22 
+float t = 0;       // variable to store the temperature
+float h = 0;      // variable to store the humidity
+int RS1 = 0;      // variable to store the read value1
+int RS2 = 0;      // variable to store the read value2
+int d1 = 0,d2 = 0, d=0, d3=0, r1=0, r2=0; // variable to store number of bucket
+uint8_t buf[6]; // n is an array of 10 integers
+//*****************************************************
+void setup() 
+{
+   pinMode(ReadSwitch1, INPUT);      // sets the digital pin 6 as input
+   pinMode(ReadSwitch2, INPUT);      // sets the digital pin 15 as input
+     
+   pinMode(RelayPin1, OUTPUT);   // Set RelayPin1 as an output pin
+   pinMode(RelayPin2, OUTPUT);   // Set RelayPin2 as an output pin
+   digitalWrite(RelayPin1, HIGH);
+   digitalWrite(RelayPin2, HIGH);
+   
+   pinMode(ERS485, OUTPUT);    // Set ERS485 as an output pin
+   digitalWrite(ERS485,HIGH);  //(always high as Master Write data to Slave)
+    
+   Serial.begin(9600);
+
+    buf[0]='&';
+    buf[5]='*';
+}
+//*****************************************************
+void loop() 
+{
+//*********************************************   Uncomment whatever type you're using!
+   readData = DHT.read22(dataPin); // DHT22/AM2302 
+   t = DHT.temperature;  // Gets the values of the temperature
+   h = DHT.humidity;     // Gets the values of the humidity
+   delay(20);
+//*********************************************   Bucket Number
+   RS1 = digitalRead(ReadSwitch1);   // read the input pin 6
+   if (RS1 == LOW){
+     d1++;
+   }
+   delay(20);
+   RS2 = digitalRead(ReadSwitch2);   // read the input pin 15
+   if (RS2 == LOW){
+     d2++;
+   }
+   delay(20);
+//*******************Control Relays**************************    
+   if (t < 0){
+     digitalWrite(RelayPin1, LOW);
+     digitalWrite(RelayPin2, LOW);
+//     Serial.print(t);
+//     Serial.println("t < 0");
+   }
+   if ( t<4 && t>=1 ){
+      digitalWrite(RelayPin1, LOW);
+      digitalWrite(RelayPin2, HIGH);
+//     Serial.print(t);
+//      Serial.println("t<4 && t>=0");
+
+   }
+   if (t >= 4){
+     digitalWrite(RelayPin1, HIGH);
+     digitalWrite(RelayPin2, HIGH);
+//     Serial.print(t);
+//     Serial.println("t >= 4");
+
+   }
+//*******************Send buffer **************************    
+   buf[1]=t;
+   buf[2]=h;
+   buf[3]=d1;
+   buf[4]=d2;
+   //Serial.print(d1);
+   //Serial.println(d2);
+   d1=0;
+   d2=0; 
+   Serial.write( buf,6);
+//*********************************************    
+    delay(50); // Delays 2 secods
+}
